@@ -138,6 +138,11 @@ def build_project(config_path: Path | None = None, dry_run: bool = False) -> Pat
         *(["-G", "Ninja"] if sys.platform.startswith("win") else []),
         f"-DPICO_SDK_PATH={sdk_path}",
         f"-DPICO_BOARD={board_def}",
+        *(
+            [f"-Dpicotool_DIR={env['picotool_DIR']}"]
+            if sys.platform.startswith("win") and "picotool_DIR" in env
+            else []
+        ),
         *config.cmake_args,
     ]
     

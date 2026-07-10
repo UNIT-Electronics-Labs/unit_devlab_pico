@@ -29,6 +29,9 @@ ARM_GCC_RELEASE_URL = "https://developer.arm.com/downloads/-/arm-gnu-toolchain-d
 NINJA_VERSION = "1.13.2"
 NINJA_RELEASE_URL = f"https://github.com/ninja-build/ninja/releases/tag/v{NINJA_VERSION}"
 
+PICOTOOL_VERSION = PICO_SDK_VERSION
+PICOTOOL_RELEASE_URL = "https://github.com/raspberrypi/pico-sdk-tools/releases/tag/v2.0.0-5"
+
 
 @dataclass(frozen=True)
 class ToolchainAsset:
@@ -92,6 +95,16 @@ NINJA_WINDOWS_ASSET = ToolchainAsset(
     sha256="07fc8261b42b20e71d1720b39068c2e14ffcee6396b76fb7a795fb460b78dc65",
 )
 
+PICOTOOL_WINDOWS_ASSET = ToolchainAsset(
+    platform="windows-x64",
+    name=f"picotool-{PICOTOOL_VERSION}-x64-win.zip",
+    url=(
+        "https://github.com/raspberrypi/pico-sdk-tools/releases/download/"
+        f"v2.0.0-5/picotool-{PICOTOOL_VERSION}-x64-win.zip"
+    ),
+    sha256="653f785167b9892e887ddbf0803f9a804338035e7c0f22ee53bcd419bdd782dd",
+)
+
 
 def devlab_home() -> Path:
     return Path(os.environ.get("DEVLAB_HOME", Path.home() / ".devlab")).expanduser()
@@ -134,6 +147,11 @@ def ninja_install_path(home: Path | None = None) -> Path:
     return toolchains_dir(home) / f"ninja-{NINJA_VERSION}-windows-x64"
 
 
+def picotool_install_path(home: Path | None = None) -> Path:
+    """Get the installation path for the managed picotool package."""
+    return toolchains_dir(home) / f"picotool-{PICOTOOL_VERSION}-windows-x64"
+
+
 def gcc_archive_path(asset: ToolchainAsset | None = None, home: Path | None = None) -> Path:
     asset = asset or select_asset()
     return cache_dir(home) / asset.name
@@ -145,6 +163,10 @@ def pico_sdk_archive_path(home: Path | None = None) -> Path:
 
 def ninja_archive_path(home: Path | None = None) -> Path:
     return cache_dir(home) / NINJA_WINDOWS_ASSET.name
+
+
+def picotool_archive_path(home: Path | None = None) -> Path:
+    return cache_dir(home) / PICOTOOL_WINDOWS_ASSET.name
 
 
 def gcc_bin_dir(path: Path | None = None) -> Path:
@@ -172,6 +194,9 @@ def env_with_toolchain(
     
     # Set Pico SDK environment variables
     env["PICO_SDK_PATH"] = str(sdk_path)
+    managed_picotool = picotool_install_path() / "picotool"
+    if (managed_picotool / "picotoolConfig.cmake").exists():
+        env["picotool_DIR"] = str(managed_picotool)
     
     return env
 
@@ -312,6 +337,7 @@ def install_pico_sdk(home: Path | None = None, force: bool = False) -> Path:
     destination = pico_sdk_install_path(home)
 
     if destination.exists() and (destination / "pico_sdk_init.cmake").exists() and not force:
+        _init_pico_sdk_submodules(destination)
         return destination
 
     archive = download_asset(PICO_SDK_ASSET, pico_sdk_archive_path(home), force=force)
@@ -361,13 +387,44 @@ def install_ninja(home: Path | None = None, force: bool = False) -> Path:
     return destination
 
 
+def install_picotool(home: Path | None = None, force: bool = False) -> Path:
+    """Install prebuilt picotool so a native Windows compiler is not required."""
+    home = home or devlab_home()
+    platform_id = current_platform()
+    if platform_id.key != PICOTOOL_WINDOWS_ASSET.platform:
+        raise DevlabError(
+            f"Managed picotool is not available for {platform_id.key}; install it separately."
+        )
+
+    destination = picotool_install_path(home)
+    config_file = destination / "picotool" / "picotoolConfig.cmake"
+    executable = destination / "picotool" / "picotool.exe"
+    if config_file.exists() and executable.exists() and not force:
+        return destination
+
+    archive = download_asset(
+        PICOTOOL_WINDOWS_ASSET,
+        picotool_archive_path(home),
+        force=force,
+    )
+    print(f"Installing picotool to {destination}...")
+    _extract_zip(archive, destination, force=force)
+    if not config_file.exists() or not executable.exists():
+        raise DevlabError(
+            "picotool installation completed but its executable or CMake config was not found."
+        )
+    return destination
+
+
 def _init_pico_sdk_submodules(sdk_path: Path) -> None:
     """Initialize Pico SDK submodules (tinyusb, etc)."""
     print("Initializing Pico SDK submodules...")
     
     # For now, just download tinyusb which is the main submodule needed
     tinyusb_path = sdk_path / "lib" / "tinyusb"
-    if not tinyusb_path.exists():
+    if not (tinyusb_path / "src" / "tusb.h").exists():
+        if tinyusb_path.exists():
+            shutil.rmtree(tinyusb_path)
         tinyusb_path.parent.mkdir(parents=True, exist_ok=True)
         try:
             subprocess.check_call(
@@ -384,12 +441,13 @@ def _init_pico_sdk_submodules(sdk_path: Path) -> None:
 def install_toolchains(
     home: Path | None = None,
     force: bool = False,
-) -> tuple[Path, Path, Path | None]:
-    """Install ARM GCC, Pico SDK, and managed Ninja on Windows."""
+) -> tuple[Path, Path, Path | None, Path | None]:
+    """Install ARM GCC, Pico SDK, Ninja, and picotool."""
     gcc_path = install_arm_gcc(home, force)
     sdk_path = install_pico_sdk(home, force)
     ninja_path = install_ninja(home, force) if sys.platform.startswith("win") else None
-    return gcc_path, sdk_path, ninja_path
+    picotool_path = install_picotool(home, force) if sys.platform.startswith("win") else None
+    return gcc_path, sdk_path, ninja_path, picotool_path
 
 
 def _move_extracted_tree(source: Path, destination: Path, force: bool) -> None:
