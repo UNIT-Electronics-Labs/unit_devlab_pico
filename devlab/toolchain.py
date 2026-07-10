@@ -189,6 +189,11 @@ def missing_toolchain_components(
     # Check CMake
     if not shutil.which("cmake"):
         missing.append("cmake")
+
+    # CMake uses Ninja explicitly on Windows, avoiding a dependency on NMake
+    # and the Visual Studio developer environment.
+    if sys.platform.startswith("win") and not shutil.which("ninja"):
+        missing.append("ninja")
     
     return missing
 

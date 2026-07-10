@@ -109,7 +109,8 @@ def _write(path: Path, content: str, force: bool) -> None:
 def build_project(config_path: Path | None = None, dry_run: bool = False) -> Path:
     """Build a Pico project using CMake."""
     config = load_config(config_path)
-    build_dir = Path(config.build_dir)
+    project_dir = (config_path.parent if config_path else Path.cwd()).resolve()
+    build_dir = (project_dir / config.build_dir).resolve()
     
     # Check for required tools
     missing = missing_toolchain_components()
@@ -131,7 +132,9 @@ def build_project(config_path: Path | None = None, dry_run: bool = False) -> Pat
     
     cmake_configure_cmd = [
         "cmake",
-        "..",
+        "-S", str(project_dir),
+        "-B", str(build_dir),
+        *(["-G", "Ninja"] if sys.platform.startswith("win") else []),
         f"-DPICO_SDK_PATH={sdk_path}",
         f"-DPICO_BOARD={board_def}",
         *config.cmake_args,
@@ -139,20 +142,20 @@ def build_project(config_path: Path | None = None, dry_run: bool = False) -> Pat
     
     if not dry_run:
         print(f"Configuring CMake project in {build_dir}...")
-        _run_command(cmake_configure_cmd, cwd=build_dir, env=env)
+        _run_command(cmake_configure_cmd, cwd=project_dir, env=env)
     else:
         print(f"Would run: {' '.join(shlex.quote(str(arg)) for arg in cmake_configure_cmd)}")
     
     # Build with CMake
-    cmake_build_cmd = ["cmake", "--build", ".", "--", "-j4"]
+    cmake_build_cmd = ["cmake", "--build", str(build_dir)]
     
     if not dry_run:
         print(f"Building project...")
-        _run_command(cmake_build_cmd, cwd=build_dir, env=env)
+        _run_command(cmake_build_cmd, cwd=project_dir, env=env)
     else:
         print(f"Would run: {' '.join(shlex.quote(str(arg)) for arg in cmake_build_cmd)}")
     
-    artifact = Path(config.artifact)
+    artifact = project_dir / config.artifact
     if not dry_run and not artifact.exists():
         raise DevlabError(f"Build completed but artifact not found: {artifact}")
     
