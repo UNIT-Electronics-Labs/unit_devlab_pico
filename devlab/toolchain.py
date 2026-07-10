@@ -25,6 +25,10 @@ PICO_SDK_RELEASE_URL = "https://github.com/raspberrypi/pico-sdk/releases/tag/2.0
 ARM_GCC_VERSION = "13.2.Rel1"
 ARM_GCC_RELEASE_URL = "https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads"
 
+# Ninja version used as the CMake generator on Windows
+NINJA_VERSION = "1.13.2"
+NINJA_RELEASE_URL = f"https://github.com/ninja-build/ninja/releases/tag/v{NINJA_VERSION}"
+
 
 @dataclass(frozen=True)
 class ToolchainAsset:
@@ -81,6 +85,13 @@ PICO_SDK_ASSET = ToolchainAsset(
     sha256=None,  # GitHub generates tarballs dynamically
 )
 
+NINJA_WINDOWS_ASSET = ToolchainAsset(
+    platform="windows-x64",
+    name=f"ninja-win-{NINJA_VERSION}.zip",
+    url=f"https://github.com/ninja-build/ninja/releases/download/v{NINJA_VERSION}/ninja-win.zip",
+    sha256="07fc8261b42b20e71d1720b39068c2e14ffcee6396b76fb7a795fb460b78dc65",
+)
+
 
 def devlab_home() -> Path:
     return Path(os.environ.get("DEVLAB_HOME", Path.home() / ".devlab")).expanduser()
@@ -118,6 +129,11 @@ def pico_sdk_install_path(home: Path | None = None) -> Path:
     return toolchains_dir(home) / f"pico-sdk-{PICO_SDK_VERSION}"
 
 
+def ninja_install_path(home: Path | None = None) -> Path:
+    """Get the installation path for the managed Ninja executable."""
+    return toolchains_dir(home) / f"ninja-{NINJA_VERSION}-windows-x64"
+
+
 def gcc_archive_path(asset: ToolchainAsset | None = None, home: Path | None = None) -> Path:
     asset = asset or select_asset()
     return cache_dir(home) / asset.name
@@ -125,6 +141,10 @@ def gcc_archive_path(asset: ToolchainAsset | None = None, home: Path | None = No
 
 def pico_sdk_archive_path(home: Path | None = None) -> Path:
     return cache_dir(home) / PICO_SDK_ASSET.name
+
+
+def ninja_archive_path(home: Path | None = None) -> Path:
+    return cache_dir(home) / NINJA_WINDOWS_ASSET.name
 
 
 def gcc_bin_dir(path: Path | None = None) -> Path:
@@ -145,6 +165,9 @@ def env_with_toolchain(
     
     # Add ARM GCC to PATH
     binary_dirs = [str(gcc_bin_dir(gcc_path))]
+    managed_ninja = ninja_install_path()
+    if (managed_ninja / "ninja.exe").exists():
+        binary_dirs.append(str(managed_ninja))
     env["PATH"] = os.pathsep.join(binary_dirs) + os.pathsep + env.get("PATH", "")
     
     # Set Pico SDK environment variables
@@ -166,6 +189,14 @@ def find_executable(name: str, gcc_path: Path | None = None) -> str | None:
             return str(candidate)
     
     return shutil.which(name, path=env_with_toolchain(gcc_path).get("PATH"))
+
+
+def find_ninja(home: Path | None = None) -> str | None:
+    """Find managed Ninja first, then fall back to the system PATH."""
+    managed = ninja_install_path(home) / "ninja.exe"
+    if managed.exists():
+        return str(managed)
+    return shutil.which("ninja")
 
 
 def missing_toolchain_components(
@@ -192,7 +223,7 @@ def missing_toolchain_components(
 
     # CMake uses Ninja explicitly on Windows, avoiding a dependency on NMake
     # and the Visual Studio developer environment.
-    if sys.platform.startswith("win") and not shutil.which("ninja"):
+    if sys.platform.startswith("win") and not find_ninja():
         missing.append("ninja")
     
     return missing
@@ -301,6 +332,35 @@ def install_pico_sdk(home: Path | None = None, force: bool = False) -> Path:
     return destination
 
 
+def install_ninja(home: Path | None = None, force: bool = False) -> Path:
+    """Install the managed Ninja executable used for Windows builds."""
+    home = home or devlab_home()
+    platform_id = current_platform()
+    if platform_id.key != NINJA_WINDOWS_ASSET.platform:
+        raise DevlabError(
+            f"Managed Ninja is not available for {platform_id.key}; install Ninja separately."
+        )
+
+    destination = ninja_install_path(home)
+    executable = destination / "ninja.exe"
+    if executable.exists() and not force:
+        return destination
+
+    archive = download_asset(
+        NINJA_WINDOWS_ASSET,
+        ninja_archive_path(home),
+        force=force,
+    )
+    print(f"Installing Ninja to {destination}...")
+    _extract_zip(archive, destination, force=force)
+    if not executable.exists():
+        raise DevlabError(
+            "Ninja installation completed but ninja.exe was not found. "
+            "Check the installation manually."
+        )
+    return destination
+
+
 def _init_pico_sdk_submodules(sdk_path: Path) -> None:
     """Initialize Pico SDK submodules (tinyusb, etc)."""
     print("Initializing Pico SDK submodules...")
@@ -321,11 +381,15 @@ def _init_pico_sdk_submodules(sdk_path: Path) -> None:
             print("Warning: Could not initialize tinyusb submodule. Git may not be available.")
 
 
-def install_toolchains(home: Path | None = None, force: bool = False) -> tuple[Path, Path]:
-    """Install both ARM GCC and Pico SDK."""
+def install_toolchains(
+    home: Path | None = None,
+    force: bool = False,
+) -> tuple[Path, Path, Path | None]:
+    """Install ARM GCC, Pico SDK, and managed Ninja on Windows."""
     gcc_path = install_arm_gcc(home, force)
     sdk_path = install_pico_sdk(home, force)
-    return gcc_path, sdk_path
+    ninja_path = install_ninja(home, force) if sys.platform.startswith("win") else None
+    return gcc_path, sdk_path, ninja_path
 
 
 def _move_extracted_tree(source: Path, destination: Path, force: bool) -> None:

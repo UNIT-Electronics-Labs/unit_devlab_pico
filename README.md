@@ -216,6 +216,7 @@ int main() {
 
 - Python 3.9+
 - CMake (install separately)
+- Ninja on Windows (installed by `picodev install`)
 - Git (optional, for submodule initialization)
 
 On Ubuntu/Debian:

@@ -11,6 +11,8 @@ from .project import build_project, create_project, detect_flash, doctor, flash_
 from .toolchain import (
     ARM_GCC_VERSION,
     ARM_GCC_RELEASE_URL,
+    NINJA_RELEASE_URL,
+    NINJA_VERSION,
     PICO_SDK_VERSION,
     PICO_SDK_RELEASE_URL,
     gcc_archive_path,
@@ -18,6 +20,7 @@ from .toolchain import (
     pico_sdk_install_path,
     devlab_home,
     install_toolchains,
+    ninja_install_path,
     select_asset,
 )
 
@@ -39,7 +42,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     doctor_parser.set_defaults(func=_doctor)
 
-    install_parser = commands.add_parser("install", help="Install Pico SDK and ARM GCC toolchain.")
+    install_parser = commands.add_parser("install", help="Install Pico SDK, ARM GCC, and Ninja.")
     install_parser.add_argument("--force", action="store_true", help="Re-download and reinstall.")
     install_parser.set_defaults(func=_install)
 
@@ -98,18 +101,23 @@ def _doctor(args: argparse.Namespace) -> int:
     print(f"home: {devlab_home()}")
     print(f"pico-sdk: {PICO_SDK_VERSION} ({PICO_SDK_RELEASE_URL})")
     print(f"arm-gcc: {ARM_GCC_VERSION} ({ARM_GCC_RELEASE_URL})")
+    print(f"ninja: {NINJA_VERSION} ({NINJA_RELEASE_URL})")
     print(f"asset: {asset.name}")
     print(f"gcc-archive: {gcc_archive_path(asset)}")
     print(f"gcc-toolchain: {gcc_install_path(asset)}")
     print(f"pico-sdk-path: {pico_sdk_install_path()}")
+    if platform_id.os_name == "windows":
+        print(f"ninja-path: {ninja_install_path()}")
     print()
     return doctor(strict=args.strict)
 
 
 def _install(args: argparse.Namespace) -> int:
-    gcc_path, sdk_path = install_toolchains(force=args.force)
+    gcc_path, sdk_path, ninja_path = install_toolchains(force=args.force)
     print(f"\n✓ ARM GCC toolchain installed at {gcc_path}")
     print(f"✓ Pico SDK installed at {sdk_path}")
+    if ninja_path:
+        print(f"✓ Ninja installed at {ninja_path}")
     print("\nToolchains are ready! Run 'picodev new <project>' to create a project.")
     return 0
 

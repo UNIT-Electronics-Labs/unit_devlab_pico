@@ -11,6 +11,7 @@ from .errors import DevlabError
 from .toolchain import (
     env_with_toolchain,
     find_executable,
+    find_ninja,
     gcc_install_path,
     pico_sdk_install_path,
     missing_toolchain_components,
@@ -264,6 +265,8 @@ def doctor(strict: bool = False) -> int:
         print(f"  - ARM GCC: {find_executable('arm-none-eabi-gcc')}")
         print(f"  - Pico SDK: {pico_sdk_install_path()}")
         print(f"  - CMake: {shutil.which('cmake')}")
+        if sys.platform.startswith("win"):
+            print(f"  - Ninja: {find_ninja()}")
         return 0
     
     print("Missing tools:")
