@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "picodev"
+version = "0.1.0"
+description = "Raspberry Pi Pico development helper for installing Pico SDK and ARM GCC toolchain."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [
+  { name = "Mrju10", email = "name@email.com" }
+]
+keywords = ["pico", "raspberry-pi-pico", "pico-sdk", "arm-gcc", "picodev", "rp2040"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Operating System :: MacOS",
+  "Operating System :: Microsoft :: Windows",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Topic :: Software Development :: Build Tools",
+  "Topic :: Software Development :: Embedded Systems",
+]
+dependencies = [
+  "tomli>=2.0.1; python_version<'3.11'",
+]
+
+[project.urls]
+Homepage = "https://github.com/unit-electronics/unit_devlab_lib"
+Source = "https://github.com/unit-electronics/unit_devlab_lib"
+
+[project.scripts]
+picodev = "devlab.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["devlab*"]
