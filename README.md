@@ -111,21 +111,20 @@ Output will be in `build/blink.uf2`.
 
 ## Flashing
 
-`picodev flash` copies the UF2 file to your Pico in BOOTSEL mode:
+`picodev flash` programs the ELF firmware over SWD using pyOCD:
 
-1. Hold the BOOTSEL button on your Pico
-2. Connect USB cable
-3. Release BOOTSEL button
-4. Run `picodev flash`
+1. Connect a CMSIS-DAP compatible debug probe to the Pico SWD pins
+2. Connect the probe over USB
+3. Run `picodev flash`
 
-The Pico will appear as a USB mass storage device (RPI-RP2). The flash command
-automatically detects the mount point and copies the UF2 file.
+The command selects `rp2040` for Pico/Pico W and `rp2350` for Pico 2, then
+programs `build/<project>.elf`. Use `--probe <ID>` when multiple probes are connected.
 
 ```bash
-devlab flash
+picodev flash
 ```
 
-To detect if your Pico is in BOOTSEL mode:
+To list the debug probes detected by pyOCD:
 
 ```bash
 picodev flash --detect
@@ -205,7 +204,7 @@ int main() {
    picodev build
    ```
 
-5. Flash to Pico (hold BOOTSEL button):
+5. Flash to Pico over SWD:
    ```bash
    picodev flash
    ```

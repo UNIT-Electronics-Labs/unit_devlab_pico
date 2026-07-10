@@ -181,38 +181,35 @@ def _get_board_definition(board: str) -> str:
 def flash_project(
     config_path: Path | None = None,
     artifact: Path | None = None,
+    probe: str | None = None,
     dry_run: bool = False,
 ) -> None:
-    """Flash UF2 file to Pico in BOOTSEL mode."""
-    config = load_config(config_path) if config_path else None
-    
-    if artifact:
-        uf2_file = artifact
-    elif config:
-        uf2_file = Path(config.artifact)
-    else:
-        raise DevlabError("No artifact specified and no config found")
-    
-    if not dry_run and not uf2_file.exists():
-        raise DevlabError(f"UF2 file not found: {uf2_file}")
-    
-    # Find Pico in BOOTSEL mode
-    mount_point = _find_pico_mount()
-    
-    if not mount_point and not dry_run:
-        raise DevlabError(
-            "Pico not found in BOOTSEL mode. "
-            "Hold BOOTSEL button while connecting USB."
-        )
-    
+    """Flash the project ELF over SWD using pyOCD."""
+    config_path = config_path or Path(DEFAULT_CONFIG)
+    config = load_config(config_path)
+    project_dir = config_path.parent.resolve()
+
+    firmware = artifact or Path(config.elf_artifact)
+    if not firmware.is_absolute():
+        firmware = project_dir / firmware
+    firmware = firmware.resolve()
+
+    if not dry_run and not firmware.exists():
+        raise DevlabError(f"ELF firmware not found: {firmware}. Run 'picodev build' first.")
+
+    target = "rp2350" if config.board == "pico2" else "rp2040"
+    command = [sys.executable, "-m", "pyocd", "flash", "--target", target]
+    if probe:
+        command.extend(["--probe", probe])
+    command.append(str(firmware))
+
     if dry_run:
-        print(f"Would copy {uf2_file} to Pico")
-    else:
-        import shutil
-        dest = mount_point / uf2_file.name
-        print(f"Copying {uf2_file} to {dest}...")
-        shutil.copy(uf2_file, dest)
-        print("Flash complete! Pico will reboot automatically.")
+        print(f"Would run: {' '.join(shlex.quote(str(arg)) for arg in command)}")
+        return
+
+    print(f"Flashing {firmware} to {target} with pyOCD...")
+    _run_command(command, cwd=project_dir)
+    print("Flash complete! Target reset and running.")
 
 
 def _find_pico_mount() -> Path | None:
@@ -246,19 +243,12 @@ def _find_pico_mount() -> Path | None:
 
 
 def detect_flash(dry_run: bool = False) -> None:
-    """Detect Pico in BOOTSEL mode."""
-    mount_point = _find_pico_mount()
-    
-    if mount_point:
-        print(f"Pico found at: {mount_point}")
-        
-        info_file = mount_point / "INFO_UF2.TXT"
-        if info_file.exists():
-            print("\nBoard info:")
-            print(info_file.read_text())
+    """List debug probes available to pyOCD."""
+    command = [sys.executable, "-m", "pyocd", "list", "--probes"]
+    if dry_run:
+        print(f"Would run: {' '.join(shlex.quote(str(arg)) for arg in command)}")
     else:
-        print("Pico not found in BOOTSEL mode.")
-        print("Hold BOOTSEL button while connecting USB to enter BOOTSEL mode.")
+        _run_command(command)
 
 
 def doctor(strict: bool = False) -> int:

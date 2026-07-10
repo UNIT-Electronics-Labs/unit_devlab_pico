@@ -72,13 +72,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     build.set_defaults(func=_build)
 
-    flash = commands.add_parser("flash", help="Flash the built UF2 file to Pico.")
+    flash = commands.add_parser("flash", help="Flash the built ELF to Pico using pyOCD.")
     flash.add_argument("-c", "--config", type=Path, help="Path to devlab.toml.")
-    flash.add_argument("--artifact", type=Path, help="UF2 file path.")
+    flash.add_argument("--artifact", type=Path, help="ELF firmware path.")
+    flash.add_argument("--probe", help="pyOCD debug probe unique ID or prefix.")
     flash.add_argument(
         "--detect",
         action="store_true",
-        help="Detect Pico in BOOTSEL mode without flashing.",
+        help="List debug probes detected by pyOCD without flashing.",
     )
     flash.add_argument("--dry-run", action="store_true", help="Print command without running it.")
     flash.set_defaults(func=_flash)
@@ -155,6 +156,7 @@ def _flash(args: argparse.Namespace) -> int:
     flash_project(
         config_path=args.config,
         artifact=args.artifact,
+        probe=args.probe,
         dry_run=args.dry_run,
     )
     return 0
