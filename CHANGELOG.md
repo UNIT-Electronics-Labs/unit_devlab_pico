@@ -5,6 +5,16 @@ All notable changes to picodev will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- New projects use a flat `main.c` layout and the configurable CMake template.
+- The generated CMake minimum version is now 3.20.
+- Project support links now point to `UNIT-Electronics-Labs/unit_devlab_pico`.
+
+### Added
+- Default board profiles for UNIT Pulsar RP (RP2350) and DualMCU RP (RP2040).
+
 ## [0.1.0] - 2026-07-09
 
 ### Added

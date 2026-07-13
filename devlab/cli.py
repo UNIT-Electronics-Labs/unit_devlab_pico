@@ -7,7 +7,14 @@ from pathlib import Path
 from . import __version__
 from .errors import DevlabError
 from .platforms import current_platform
-from .project import build_project, create_project, detect_flash, doctor, flash_project
+from .project import (
+    SUPPORTED_BOARDS,
+    build_project,
+    create_project,
+    detect_flash,
+    doctor,
+    flash_project,
+)
 from .toolchain import (
     ARM_GCC_VERSION,
     ARM_GCC_RELEASE_URL,
@@ -57,7 +64,7 @@ def build_parser() -> argparse.ArgumentParser:
     new_parser.add_argument("--force", action="store_true", help="Overwrite template files.")
     new_parser.add_argument(
         "--board",
-        choices=("pico", "pico_w", "pico2"),
+        choices=SUPPORTED_BOARDS,
         default="pico",
         help="Target board. Defaults to pico.",
     )

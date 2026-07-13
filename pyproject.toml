@@ -31,8 +31,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/unit-electronics/unit_devlab_lib"
-Source = "https://github.com/unit-electronics/unit_devlab_lib"
+Homepage = "https://github.com/UNIT-Electronics-Labs/unit_devlab_pico"
+Source = "https://github.com/UNIT-Electronics-Labs/unit_devlab_pico"
+Issues = "https://github.com/UNIT-Electronics-Labs/unit_devlab_pico/issues"
 
 [project.scripts]
 picodev = "devlab.cli:main"

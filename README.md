@@ -70,7 +70,8 @@ Downloaded archives are verified with SHA-256 digests.
 blink/
   picodev.toml
   CMakeLists.txt
-  src/main.c
+  pico_sdk_import.cmake
+  main.c
   .gitignore
 ```
 
@@ -89,7 +90,7 @@ board = "pico"
 [build]
 name = "blink"
 build_dir = "build"
-sources = ["src/main.c"]
+sources = ["main.c"]
 ```
 
 ## Build Flow
@@ -135,6 +136,15 @@ picodev flash --detect
 - `pico` - Raspberry Pi Pico (RP2040)
 - `pico_w` - Raspberry Pi Pico W (RP2040 with WiFi)
 - `pico2` - Raspberry Pi Pico 2 (RP2350)
+- `pulsar_rp` - UNIT Pulsar RP (RP2350; uses the Pico 2 SDK definition)
+- `dualmcu_rp` - UNIT DualMCU RP (RP2040; uses the Pico SDK definition)
+
+For example:
+
+```bash
+picodev new pulsar-project --board pulsar_rp
+picodev new dualmcu-project --board dualmcu_rp
+```
 
 ## Example Project
 
@@ -197,7 +207,7 @@ int main() {
    cd my-project
    ```
 
-3. Edit `src/main.c` with your code
+3. Edit `main.c` with your code
 
 4. Build:
    ```bash
@@ -214,7 +224,7 @@ int main() {
 ## Requirements
 
 - Python 3.9+
-- CMake (install separately)
+- CMake 3.20 or newer (install separately)
 - Ninja on Windows (installed by `picodev install`)
 - picotool on Windows (installed by `picodev install`)
 - Git (optional, for submodule initialization)
@@ -231,6 +241,13 @@ brew install cmake git
 
 On Windows:
 Download CMake from https://cmake.org/download/
+
+## Support
+
+For documentation, bug reports, and feature requests, visit the
+[UNIT-Electronics-Labs/unit_devlab_pico](https://github.com/UNIT-Electronics-Labs/unit_devlab_pico)
+repository. Report problems through
+[GitHub Issues](https://github.com/UNIT-Electronics-Labs/unit_devlab_pico/issues).
 
 ## License
 
