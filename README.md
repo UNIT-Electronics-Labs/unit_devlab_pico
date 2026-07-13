@@ -25,6 +25,7 @@ picodev new blink
 picodev new hello-world
 cd blink
 picodev build
+picodev clean
 picodev flash
 ```
 
@@ -109,6 +110,15 @@ picodev build
 ```
 
 Output will be in `build/blink.uf2`.
+
+To remove all generated build files and start from a clean configuration:
+
+```bash
+picodev clean
+```
+
+The command only removes the `build_dir` configured in `picodev.toml` and refuses
+to delete the project root or a directory outside the project.
 
 ## Flashing
 
@@ -214,12 +224,17 @@ int main() {
    picodev build
    ```
 
-5. Flash to Pico over SWD:
+5. Clean generated build files when needed:
+   ```bash
+   picodev clean
+   ```
+
+6. Flash to Pico over SWD:
    ```bash
    picodev flash
    ```
 
-6. Your code runs immediately after flashing!
+7. Your code runs immediately after flashing!
 
 ## Requirements
 

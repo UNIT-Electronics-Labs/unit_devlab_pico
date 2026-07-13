@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import shlex
+import shutil
 import subprocess
 import sys
 from dataclasses import dataclass, field
@@ -169,6 +170,32 @@ def build_project(config_path: Path | None = None, dry_run: bool = False) -> Pat
         raise DevlabError(f"Build completed but artifact not found: {artifact}")
     
     return artifact
+
+
+def clean_project(config_path: Path | None = None) -> tuple[Path, bool]:
+    """Remove the configured build directory for a Pico project."""
+    config_path = config_path or Path(DEFAULT_CONFIG)
+    config = load_config(config_path)
+    project_dir = config_path.parent.resolve()
+    build_dir = (project_dir / config.build_dir).resolve()
+
+    try:
+        build_dir.relative_to(project_dir)
+    except ValueError as exc:
+        raise DevlabError(
+            f"Refusing to clean a build directory outside the project: {build_dir}"
+        ) from exc
+
+    if build_dir == project_dir:
+        raise DevlabError("Refusing to clean the project root directory.")
+
+    if not build_dir.exists():
+        return build_dir, False
+    if not build_dir.is_dir():
+        raise DevlabError(f"Build path is not a directory: {build_dir}")
+
+    shutil.rmtree(build_dir)
+    return build_dir, True
 
 
 def _get_board_definition(board: str) -> str:
@@ -392,6 +419,3 @@ int main() {
     }
 }
 """
-
-
-import shutil

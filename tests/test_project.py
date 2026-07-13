@@ -6,7 +6,8 @@ from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
 
-from devlab.project import create_project, flash_project, load_config
+from devlab.errors import DevlabError
+from devlab.project import clean_project, create_project, flash_project, load_config
 
 
 class CreateProjectTests(unittest.TestCase):
@@ -74,6 +75,45 @@ class CreateProjectTests(unittest.TestCase):
                 with redirect_stdout(output):
                     flash_project(config_path=config_path, dry_run=True)
                 self.assertIn(f"--target {pyocd_target}", output.getvalue())
+
+
+class CleanProjectTests(unittest.TestCase):
+    def test_removes_configured_build_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir) / "blink"
+            create_project("blink", directory=root)
+            build_dir = root / "build"
+            build_dir.mkdir()
+            (build_dir / "blink.uf2").write_text("firmware")
+
+            cleaned_path, removed = clean_project(root / "picodev.toml")
+
+            self.assertEqual(cleaned_path, build_dir)
+            self.assertTrue(removed)
+            self.assertFalse(build_dir.exists())
+
+    def test_is_idempotent_when_build_directory_does_not_exist(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir) / "blink"
+            create_project("blink", directory=root)
+
+            cleaned_path, removed = clean_project(root / "picodev.toml")
+
+            self.assertEqual(cleaned_path, root / "build")
+            self.assertFalse(removed)
+
+    def test_refuses_to_remove_project_root(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir) / "blink"
+            create_project("blink", directory=root)
+            config_path = root / "picodev.toml"
+            config_path.write_text(
+                '[pico]\nboard = "pico"\n\n[build]\n'
+                'name = "blink"\nbuild_dir = "."\nsources = ["main.c"]\n'
+            )
+
+            with self.assertRaisesRegex(DevlabError, "project root"):
+                clean_project(config_path)
 
 
 if __name__ == "__main__":

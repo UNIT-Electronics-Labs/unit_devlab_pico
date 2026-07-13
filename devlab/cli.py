@@ -10,6 +10,7 @@ from .platforms import current_platform
 from .project import (
     SUPPORTED_BOARDS,
     build_project,
+    clean_project,
     create_project,
     detect_flash,
     doctor,
@@ -78,6 +79,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="Print commands without running them.",
     )
     build.set_defaults(func=_build)
+
+    clean = commands.add_parser("clean", help="Remove the current project's build directory.")
+    clean.add_argument("-c", "--config", type=Path, help="Path to picodev.toml.")
+    clean.set_defaults(func=_clean)
 
     flash = commands.add_parser("flash", help="Flash the built ELF to Pico using pyOCD.")
     flash.add_argument("-c", "--config", type=Path, help="Path to devlab.toml.")
@@ -152,6 +157,15 @@ def _new(args: argparse.Namespace) -> int:
 def _build(args: argparse.Namespace) -> int:
     artifact = build_project(config_path=args.config, dry_run=args.dry_run)
     print(f"\n✓ Build artifact: {artifact}")
+    return 0
+
+
+def _clean(args: argparse.Namespace) -> int:
+    build_dir, removed = clean_project(config_path=args.config)
+    if removed:
+        print(f"Cleaned build directory: {build_dir}")
+    else:
+        print(f"Build directory is already clean: {build_dir}")
     return 0
 
 
