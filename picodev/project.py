@@ -108,7 +108,10 @@ def _write(path: Path, content: str, force: bool) -> None:
     """Write content to file."""
     if path.exists() and not force:
         return
-    path.write_text(content)
+    # Project templates contain Unicode and must not depend on the host's locale.
+    # In particular, Windows commonly defaults to cp1252, which cannot encode the
+    # box-drawing characters in the generated CMakeLists.txt.
+    path.write_text(content, encoding="utf-8")
 
 
 def build_project(config_path: Path | None = None, dry_run: bool = False) -> Path:
@@ -120,9 +123,13 @@ def build_project(config_path: Path | None = None, dry_run: bool = False) -> Pat
     # Check for required tools
     missing = missing_toolchain_components()
     if missing:
+        guidance = []
+        if any(tool != "cmake" for tool in missing):
+            guidance.append("Run 'picodev install' to install managed toolchains.")
+        if "cmake" in missing:
+            guidance.append("Install CMake 3.20 or newer separately and add it to PATH.")
         raise PicodevError(
-            f"Missing required tools: {', '.join(missing)}. "
-            "Run 'picodev install' to install toolchains."
+            f"Missing required tools: {', '.join(missing)}. {' '.join(guidance)}"
         )
     
     # Configure with CMake
@@ -300,7 +307,10 @@ def doctor(strict: bool = False) -> int:
     for tool in missing:
         print(f"  ✗ {tool}")
     
-    print("\nRun 'picodev install' to install missing toolchains.")
+    if any(tool != "cmake" for tool in missing):
+        print("\nRun 'picodev install' to install managed toolchains.")
+    if "cmake" in missing:
+        print("Install CMake 3.20 or newer separately and add it to PATH.")
     
     return 1 if strict else 0
 

@@ -5,9 +5,17 @@ import unittest
 from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
+from unittest.mock import patch
 
 from picodev.errors import PicodevError
-from picodev.project import clean_project, create_project, flash_project, load_config
+from picodev.project import (
+    build_project,
+    clean_project,
+    create_project,
+    doctor,
+    flash_project,
+    load_config,
+)
 
 
 class CreateProjectTests(unittest.TestCase):
@@ -33,6 +41,16 @@ class CreateProjectTests(unittest.TestCase):
 
             config = load_config(root / "picodev.toml")
             self.assertEqual(config.sources, ["main.c"])
+
+    def test_writes_all_templates_as_utf8(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir) / "blink"
+
+            create_project("blink", directory=root)
+
+            cmake_bytes = (root / "CMakeLists.txt").read_bytes()
+            self.assertIn("─".encode("utf-8"), cmake_bytes)
+            self.assertIn("PROJECT CONFIGURATION", cmake_bytes.decode("utf-8"))
 
     def test_pico_w_links_cyw43_support(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -114,6 +132,30 @@ class CleanProjectTests(unittest.TestCase):
 
             with self.assertRaisesRegex(PicodevError, "project root"):
                 clean_project(config_path)
+
+
+class MissingToolGuidanceTests(unittest.TestCase):
+    @patch("picodev.project.missing_toolchain_components", return_value=["cmake"])
+    def test_build_explains_that_cmake_is_installed_separately(self, _missing) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = Path(temp_dir) / "picodev.toml"
+            config_path.write_text(
+                '[pico]\nboard = "pico"\n\n[build]\nname = "blink"\n',
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(PicodevError, "Install CMake 3.20 or newer separately"):
+                build_project(config_path)
+
+    @patch("picodev.project.missing_toolchain_components", return_value=["cmake"])
+    def test_doctor_does_not_claim_install_command_installs_cmake(self, _missing) -> None:
+        output = StringIO()
+
+        with redirect_stdout(output):
+            doctor()
+
+        self.assertIn("Install CMake 3.20 or newer separately", output.getvalue())
+        self.assertNotIn("picodev install", output.getvalue())
 
 
 if __name__ == "__main__":

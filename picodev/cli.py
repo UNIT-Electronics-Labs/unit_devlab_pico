@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import platform
+import shutil
 from pathlib import Path
 
 from . import __version__
@@ -140,7 +141,11 @@ def _install(args: argparse.Namespace) -> int:
         print(f"✓ Ninja installed at {ninja_path}")
     if picotool_path:
         print(f"✓ picotool installed at {picotool_path}")
-    print("\nToolchains are ready! Run 'picodev new <project>' to create a project.")
+    if shutil.which("cmake"):
+        print("\nToolchains are ready! Run 'picodev new <project>' to create a project.")
+    else:
+        print("\nManaged toolchains are installed.")
+        print("CMake 3.20 or newer is still required; install it separately and add it to PATH.")
     return 0
 
 
