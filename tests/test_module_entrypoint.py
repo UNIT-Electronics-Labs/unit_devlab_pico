@@ -14,7 +14,7 @@ class ModuleEntrypointTests(unittest.TestCase):
             text=True,
         )
 
-        self.assertEqual(result.stdout.strip(), "picodev 0.1.10")
+        self.assertEqual(result.stdout.strip(), "picodev 0.1.11")
 
 
 if __name__ == "__main__":

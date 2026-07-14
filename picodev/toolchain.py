@@ -496,13 +496,37 @@ def install_toolchains(
     return gcc_path, sdk_path, ninja_path, picotool_path
 
 
+def _rmtree_force(path: Path) -> None:
+    """Remove a directory tree, retrying after clearing read-only flags on Windows."""
+    def _handle_error(func, path_str: str, exc: BaseException) -> None:
+        # Clear read-only bit and retry — common on Windows with GCC toolchain files.
+        try:
+            os.chmod(path_str, stat.S_IWRITE)
+            func(path_str)
+        except OSError:
+            raise exc  # type: ignore[misc]
+
+    if sys.version_info >= (3, 12):
+        shutil.rmtree(path, onexc=_handle_error)
+    else:
+        # onerror receives (func, path, exc_info) in Python < 3.12
+        def _handle_onerror(func, path_str: str, exc_info) -> None:  # type: ignore[misc]
+            try:
+                os.chmod(path_str, stat.S_IWRITE)
+                func(path_str)
+            except OSError:
+                pass
+
+        shutil.rmtree(path, onerror=_handle_onerror)
+
+
 def _move_extracted_tree(source: Path, destination: Path, force: bool) -> None:
     """Move extracted files to destination."""
     destination.parent.mkdir(parents=True, exist_ok=True)
     if destination.exists():
         if not force:
             raise PicodevError(f"Install destination already exists: {destination}")
-        shutil.rmtree(destination)
+        _rmtree_force(destination)
 
     # Find the actual root directory in the extracted files
     items = list(source.iterdir())
