@@ -5,7 +5,12 @@ All notable changes to picodev will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.11] - 2026-07-13
+## [0.1.12] - 2026-07-13
+
+### Fixed
+- Handle read-only files when removing existing toolchain on Windows with `--force`.
+  `shutil.rmtree` now clears read-only attributes before retrying, compatible with
+  Python <3.12 (`onerror`) and Python >=3.12 (`onexc`).
 
 ### Added
 - Support for custom toolchain and SDK locations via `PICO_TOOLCHAIN_PATH` and 
