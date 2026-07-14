@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import platform
-import shutil
 from pathlib import Path
 
 from . import __version__
@@ -28,6 +27,7 @@ from .toolchain import (
     PICO_SDK_RELEASE_URL,
     gcc_archive_path,
     gcc_install_path,
+    find_cmake,
     pico_sdk_install_path,
     picodev_home,
     install_toolchains,
@@ -141,7 +141,7 @@ def _install(args: argparse.Namespace) -> int:
         print(f"✓ Ninja installed at {ninja_path}")
     if picotool_path:
         print(f"✓ picotool installed at {picotool_path}")
-    if shutil.which("cmake"):
+    if find_cmake():
         print("\nToolchains are ready! Run 'picodev new <project>' to create a project.")
     else:
         print("\nManaged toolchains are installed.")

@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import os
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from picodev.errors import PicodevError
-from picodev.toolchain import ToolchainAsset, download_asset
+from picodev.toolchain import ToolchainAsset, download_asset, find_cmake
 
 
 class DownloadAssetTests(unittest.TestCase):
@@ -63,6 +64,87 @@ class DownloadAssetTests(unittest.TestCase):
 
             self.assertFalse(destination.exists())
             self.assertFalse(destination.with_suffix(".bin.part").exists())
+
+
+class FindCMakeTests(unittest.TestCase):
+    @patch("picodev.toolchain.sys.platform", "win32")
+    @patch("picodev.toolchain.shutil.which", return_value=None)
+    def test_finds_standard_windows_install_outside_current_path(self, _which) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            executable = Path(temp_dir) / "CMake" / "bin" / "cmake.exe"
+            executable.parent.mkdir(parents=True)
+            executable.touch()
+
+            with patch.dict(
+                os.environ,
+                {"ProgramFiles": temp_dir, "ProgramW6432": temp_dir},
+                clear=True,
+            ):
+                result = find_cmake()
+
+            self.assertEqual(result, str(executable))
+
+
+class EnvironmentVariableTests(unittest.TestCase):
+    """Test that toolchain path functions respect environment variables."""
+    
+    def test_gcc_install_path_respects_pico_toolchain_path_env(self) -> None:
+        """Test that PICO_TOOLCHAIN_PATH environment variable is respected."""
+        from picodev.toolchain import gcc_install_path
+        
+        custom_path = "/custom/path/to/toolchain"
+        with patch.dict(os.environ, {"PICO_TOOLCHAIN_PATH": custom_path}):
+            result = gcc_install_path()
+            self.assertEqual(result, Path(custom_path))
+    
+    def test_gcc_install_path_expands_user_home(self) -> None:
+        """Test that ~ is expanded in PICO_TOOLCHAIN_PATH."""
+        from picodev.toolchain import gcc_install_path
+        
+        custom_path = "~/custom/toolchain"
+        with patch.dict(os.environ, {"PICO_TOOLCHAIN_PATH": custom_path}):
+            result = gcc_install_path()
+            self.assertEqual(result, Path(custom_path).expanduser())
+            self.assertNotIn("~", str(result))
+    
+    def test_pico_sdk_install_path_respects_pico_sdk_path_env(self) -> None:
+        """Test that PICO_SDK_PATH environment variable is respected."""
+        from picodev.toolchain import pico_sdk_install_path
+        
+        custom_path = "/custom/path/to/pico-sdk"
+        with patch.dict(os.environ, {"PICO_SDK_PATH": custom_path}):
+            result = pico_sdk_install_path()
+            self.assertEqual(result, Path(custom_path))
+    
+    def test_pico_sdk_install_path_expands_user_home(self) -> None:
+        """Test that ~ is expanded in PICO_SDK_PATH."""
+        from picodev.toolchain import pico_sdk_install_path
+        
+        custom_path = "~/custom/pico-sdk"
+        with patch.dict(os.environ, {"PICO_SDK_PATH": custom_path}):
+            result = pico_sdk_install_path()
+            self.assertEqual(result, Path(custom_path).expanduser())
+            self.assertNotIn("~", str(result))
+    
+    def test_env_with_toolchain_uses_custom_paths(self) -> None:
+        """Test that env_with_toolchain properly uses custom toolchain paths."""
+        from picodev.toolchain import env_with_toolchain
+        
+        custom_gcc = "/custom/gcc/path"
+        custom_sdk = "/custom/sdk/path"
+        
+        with patch.dict(os.environ, {
+            "PICO_TOOLCHAIN_PATH": custom_gcc,
+            "PICO_SDK_PATH": custom_sdk
+        }, clear=False):
+            env = env_with_toolchain()
+            
+            # Verify the environment variables are set correctly
+            self.assertEqual(env["PICO_TOOLCHAIN_PATH"], custom_gcc)
+            self.assertEqual(env["PICO_SDK_PATH"], custom_sdk)
+            
+            # Verify the bin directory is in PATH
+            self.assertIn(f"{custom_gcc}{os.sep}bin", env["PATH"])
 
 
 if __name__ == "__main__":

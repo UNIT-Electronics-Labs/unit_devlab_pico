@@ -136,12 +136,20 @@ def select_asset(platform_id: PlatformId | None = None) -> ToolchainAsset:
 
 def gcc_install_path(asset: ToolchainAsset | None = None, home: Path | None = None) -> Path:
     """Get installation path for ARM GCC toolchain."""
+    # Check if PICO_TOOLCHAIN_PATH environment variable is set
+    env_path = os.environ.get("PICO_TOOLCHAIN_PATH")
+    if env_path:
+        return Path(env_path).expanduser()
     asset = asset or select_asset()
     return toolchains_dir(home) / f"arm-gcc-{ARM_GCC_VERSION}-{asset.platform}"
 
 
 def pico_sdk_install_path(home: Path | None = None) -> Path:
     """Get installation path for Pico SDK."""
+    # Check if PICO_SDK_PATH environment variable is set
+    env_path = os.environ.get("PICO_SDK_PATH")
+    if env_path:
+        return Path(env_path).expanduser()
     return toolchains_dir(home) / f"pico-sdk-{PICO_SDK_VERSION}"
 
 
@@ -197,6 +205,7 @@ def env_with_toolchain(
     
     # Set Pico SDK environment variables
     env["PICO_SDK_PATH"] = str(sdk_path)
+    env["PICO_TOOLCHAIN_PATH"] = str(gcc_path)
     managed_picotool = picotool_install_path() / "picotool"
     if (managed_picotool / "picotoolConfig.cmake").exists():
         env["picotool_DIR"] = str(managed_picotool)
@@ -227,6 +236,25 @@ def find_ninja(home: Path | None = None) -> str | None:
     return shutil.which("ninja")
 
 
+def find_cmake() -> str | None:
+    """Find CMake on PATH or in its standard Windows installation directory."""
+    executable = shutil.which("cmake")
+    if executable:
+        return executable
+
+    if sys.platform.startswith("win"):
+        program_files_dirs = {
+            os.environ.get("ProgramFiles"),
+            os.environ.get("ProgramW6432"),
+        }
+        for program_files in filter(None, program_files_dirs):
+            candidate = Path(program_files) / "CMake" / "bin" / "cmake.exe"
+            if candidate.is_file():
+                return str(candidate)
+
+    return None
+
+
 def missing_toolchain_components(
     gcc_path: Path | None = None,
     sdk_path: Path | None = None,
@@ -246,7 +274,7 @@ def missing_toolchain_components(
         missing.append("pico-sdk")
     
     # Check CMake
-    if not shutil.which("cmake"):
+    if not find_cmake():
         missing.append("cmake")
 
     # CMake uses Ninja explicitly on Windows, avoiding a dependency on NMake

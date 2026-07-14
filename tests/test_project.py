@@ -158,5 +158,28 @@ class MissingToolGuidanceTests(unittest.TestCase):
         self.assertNotIn("picodev install", output.getvalue())
 
 
+class BuildProjectTests(unittest.TestCase):
+    def test_passes_managed_arm_gcc_path_to_pico_sdk(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = Path(temp_dir) / "picodev.toml"
+            config_path.write_text(
+                '[pico]\nboard = "pico"\n\n[build]\nname = "blink"\n',
+                encoding="utf-8",
+            )
+            output = StringIO()
+
+            with (
+                patch("picodev.project.missing_toolchain_components", return_value=[]),
+                patch("picodev.project.pico_sdk_install_path", return_value=Path("C:/sdk")),
+                patch("picodev.project.gcc_install_path", return_value=Path("C:/gcc")),
+                patch("picodev.project.find_cmake", return_value="cmake"),
+                patch("picodev.project.env_with_toolchain", return_value={}),
+                redirect_stdout(output),
+            ):
+                build_project(config_path, dry_run=True)
+
+            self.assertIn("-DPICO_TOOLCHAIN_PATH=C:/gcc", output.getvalue())
+
+
 if __name__ == "__main__":
     unittest.main()

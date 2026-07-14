@@ -5,6 +5,13 @@ All notable changes to picodev will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Support for custom toolchain and SDK locations via `PICO_TOOLCHAIN_PATH` and 
+  `PICO_SDK_PATH` environment variables. When set, `picodev build` automatically
+  uses these custom paths and adds the toolchain's bin directory to PATH.
+
 ## [0.1.10] - 2026-07-13
 
 ### Fixed

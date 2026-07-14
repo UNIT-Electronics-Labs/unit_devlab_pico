@@ -70,6 +70,39 @@ ARM GCC: https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads
 
 Downloaded archives are verified with SHA-256 digests.
 
+## Custom Toolchain Locations
+
+By default, `picodev` uses the toolchains installed in `~/.picodev/toolchains`. You can
+override these locations using environment variables:
+
+- **`PICO_SDK_PATH`**: Path to a custom Pico SDK installation
+- **`PICO_TOOLCHAIN_PATH`**: Path to a custom ARM GCC toolchain installation
+
+When these variables are set, `picodev build` will automatically:
+1. Use the custom toolchain/SDK paths
+2. Add the toolchain's `bin` directory to PATH
+3. Configure CMake with the correct paths
+
+Example (Windows PowerShell):
+```powershell
+$env:PICO_TOOLCHAIN_PATH = "$env:USERPROFILE\.picodev\toolchains\arm-gcc-13.2.Rel1-windows-x64"
+$env:PICO_SDK_PATH = "$env:USERPROFILE\.picodev\toolchains\pico-sdk-2.0.0"
+python -m picodev build
+```
+
+Example (Linux/macOS):
+```bash
+export PICO_TOOLCHAIN_PATH="$HOME/.picodev/toolchains/arm-gcc-13.2.Rel1-linux-x64"
+export PICO_SDK_PATH="$HOME/.picodev/toolchains/pico-sdk-2.0.0"
+picodev build
+```
+
+This is useful when:
+- Using a different version of the toolchain or SDK
+- Testing with a development version of the Pico SDK
+- Sharing a toolchain across multiple projects
+- Using system-installed toolchains
+
 ## Project Format
 
 `picodev new blink` creates a Pico project:
@@ -251,6 +284,9 @@ int main() {
 - picotool on Windows (installed by `picodev install`)
 - Git (optional, for submodule initialization)
 
+See the [CMake installation guide](docs/install-cmake.md) for detailed Windows,
+Ubuntu/Debian, and macOS instructions, including `PATH` troubleshooting.
+
 On Ubuntu/Debian:
 ```bash
 sudo apt install cmake git
@@ -262,7 +298,12 @@ brew install cmake git
 ```
 
 On Windows:
-Download CMake from https://cmake.org/download/
+```powershell
+winget install --exact --id Kitware.CMake --source winget
+```
+
+Alternatively, download the installer from https://cmake.org/download/ and make
+sure its option to add CMake to `PATH` is selected.
 
 If pip warns that `picodev.exe` was installed in a directory that is not on
 `PATH`, the module form remains available without changing `PATH`:

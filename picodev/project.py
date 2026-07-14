@@ -11,6 +11,7 @@ from typing import Any
 from .errors import PicodevError
 from .toolchain import (
     env_with_toolchain,
+    find_cmake,
     find_executable,
     find_ninja,
     gcc_install_path,
@@ -136,6 +137,8 @@ def build_project(config_path: Path | None = None, dry_run: bool = False) -> Pat
     sdk_path = pico_sdk_install_path()
     gcc_path = gcc_install_path()
     env = env_with_toolchain(gcc_path, sdk_path)
+    cmake = find_cmake()
+    assert cmake is not None  # Checked by missing_toolchain_components above.
     
     build_dir.mkdir(parents=True, exist_ok=True)
     
@@ -143,11 +146,12 @@ def build_project(config_path: Path | None = None, dry_run: bool = False) -> Pat
     board_def = _get_board_definition(config.board)
     
     cmake_configure_cmd = [
-        "cmake",
+        cmake,
         "-S", str(project_dir),
         "-B", str(build_dir),
         *(["-G", "Ninja"] if sys.platform.startswith("win") else []),
         f"-DPICO_SDK_PATH={sdk_path}",
+        f"-DPICO_TOOLCHAIN_PATH={gcc_path}",
         f"-DPICO_BOARD={board_def}",
         *(
             [f"-Dpicotool_DIR={env['picotool_DIR']}"]
@@ -164,7 +168,7 @@ def build_project(config_path: Path | None = None, dry_run: bool = False) -> Pat
         print(f"Would run: {' '.join(shlex.quote(str(arg)) for arg in cmake_configure_cmd)}")
     
     # Build with CMake
-    cmake_build_cmd = ["cmake", "--build", str(build_dir)]
+    cmake_build_cmd = [cmake, "--build", str(build_dir)]
     
     if not dry_run:
         print(f"Building project...")
@@ -298,7 +302,7 @@ def doctor(strict: bool = False) -> int:
         print("✓ All required tools are available")
         print(f"  - ARM GCC: {find_executable('arm-none-eabi-gcc')}")
         print(f"  - Pico SDK: {pico_sdk_install_path()}")
-        print(f"  - CMake: {shutil.which('cmake')}")
+        print(f"  - CMake: {find_cmake()}")
         if sys.platform.startswith("win"):
             print(f"  - Ninja: {find_ninja()}")
         return 0
