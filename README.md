@@ -29,6 +29,13 @@ picodev clean
 picodev flash
 ```
 
+The CLI can also be invoked through the Python interpreter, including on Windows:
+
+```bash
+python -m picodev --help
+python -m picodev --version
+```
+
 `picodev install` downloads the Pico SDK and ARM GCC toolchain. The installer selects 
 the correct toolchain for:
 
@@ -38,7 +45,7 @@ the correct toolchain for:
 - macOS arm64
 - Windows x64
 
-The default install location is `~/.devlab`. Set `DEVLAB_HOME` to use a
+The default install location is `~/.picodev`. Set `PICODEV_HOME` to use a
 different directory.
 
 `picodev build` and `picodev flash` automatically run with the installed Pico SDK 
@@ -48,9 +55,9 @@ and ARM GCC toolchain environment. You do not need to manually configure paths.
 The installed tree layout:
 
 ```text
-~/.devlab/toolchains/pico-sdk-2.0.0/
+~/.picodev/toolchains/pico-sdk-2.0.0/
   pico-sdk/
-~/.devlab/toolchains/arm-none-eabi-gcc-13.2.1/
+~/.picodev/toolchains/arm-none-eabi-gcc-13.2.1/
   bin/
   arm-none-eabi/
 ```

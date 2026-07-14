@@ -3,7 +3,7 @@ from __future__ import annotations
 import platform
 from dataclasses import dataclass
 
-from .errors import DevlabError
+from .errors import PicodevError
 
 
 @dataclass(frozen=True)
@@ -27,14 +27,13 @@ def current_platform() -> PlatformId:
     elif system in {"windows", "msys", "cygwin"}:
         os_name = "windows"
     else:
-        raise DevlabError(f"Unsupported operating system: {platform.system()}")
+        raise PicodevError(f"Unsupported operating system: {platform.system()}")
 
     if machine in {"x86_64", "amd64"}:
         arch = "x64"
     elif machine in {"aarch64", "arm64"}:
         arch = "arm64"
     else:
-        raise DevlabError(f"Unsupported CPU architecture: {platform.machine()}")
+        raise PicodevError(f"Unsupported CPU architecture: {platform.machine()}")
 
     return PlatformId(os_name=os_name, arch=arch)
-

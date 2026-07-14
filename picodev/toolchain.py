@@ -13,7 +13,7 @@ import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from .errors import DevlabError
+from .errors import PicodevError
 from .platforms import PlatformId, current_platform
 
 
@@ -106,16 +106,16 @@ PICOTOOL_WINDOWS_ASSET = ToolchainAsset(
 )
 
 
-def devlab_home() -> Path:
-    return Path(os.environ.get("DEVLAB_HOME", Path.home() / ".devlab")).expanduser()
+def picodev_home() -> Path:
+    return Path(os.environ.get("PICODEV_HOME", Path.home() / ".picodev")).expanduser()
 
 
 def toolchains_dir(home: Path | None = None) -> Path:
-    return (home or devlab_home()) / "toolchains"
+    return (home or picodev_home()) / "toolchains"
 
 
 def cache_dir(home: Path | None = None) -> Path:
-    return (home or devlab_home()) / "cache"
+    return (home or picodev_home()) / "cache"
 
 
 def select_asset(platform_id: PlatformId | None = None) -> ToolchainAsset:
@@ -125,7 +125,7 @@ def select_asset(platform_id: PlatformId | None = None) -> ToolchainAsset:
         return ARM_GCC_ASSETS[platform_id.key]
     except KeyError as exc:
         supported = ", ".join(sorted(ARM_GCC_ASSETS))
-        raise DevlabError(
+        raise PicodevError(
             f"Unsupported platform for ARM GCC toolchain: {platform_id.key}. "
             f"Supported: {supported}"
         ) from exc
@@ -277,7 +277,7 @@ def download_asset(asset: ToolchainAsset, destination: Path, force: bool = False
         urllib.request.urlretrieve(asset.url, tmp_destination, reporthook=report)
         print()
     except OSError as exc:
-        raise DevlabError(f"Could not download {asset.url}: {exc}") from exc
+        raise PicodevError(f"Could not download {asset.url}: {exc}") from exc
 
     if asset.sha256:
         verify_sha256(tmp_destination, asset.sha256)
@@ -293,14 +293,14 @@ def verify_sha256(path: Path, expected: str) -> None:
             digest.update(chunk)
     actual = digest.hexdigest()
     if actual != expected:
-        raise DevlabError(
+        raise PicodevError(
             f"SHA-256 mismatch for {path.name}: expected {expected}, got {actual}"
         )
 
 
 def install_arm_gcc(home: Path | None = None, force: bool = False) -> Path:
     """Install ARM GCC toolchain."""
-    home = home or devlab_home()
+    home = home or picodev_home()
     asset = select_asset()
     destination = gcc_install_path(asset, home)
 
@@ -316,14 +316,14 @@ def install_arm_gcc(home: Path | None = None, force: bool = False) -> Path:
     elif asset.name.endswith((".tar.xz", ".tar.gz", ".tgz")):
         _extract_tarball(archive, destination, force=force)
     else:
-        raise DevlabError(f"Unsupported archive format: {asset.name}")
+        raise PicodevError(f"Unsupported archive format: {asset.name}")
     
     # Mark executables on Unix-like systems
     _mark_executables(gcc_bin_dir(destination))
     
     # Verify installation
     if not find_executable("arm-none-eabi-gcc", destination):
-        raise DevlabError(
+        raise PicodevError(
             "ARM GCC installation completed but arm-none-eabi-gcc was not found. "
             "Check the installation manually."
         )
@@ -333,7 +333,7 @@ def install_arm_gcc(home: Path | None = None, force: bool = False) -> Path:
 
 def install_pico_sdk(home: Path | None = None, force: bool = False) -> Path:
     """Install Pico SDK."""
-    home = home or devlab_home()
+    home = home or picodev_home()
     destination = pico_sdk_install_path(home)
 
     if destination.exists() and (destination / "pico_sdk_init.cmake").exists() and not force:
@@ -350,7 +350,7 @@ def install_pico_sdk(home: Path | None = None, force: bool = False) -> Path:
     
     # Verify installation
     if not (destination / "pico_sdk_init.cmake").exists():
-        raise DevlabError(
+        raise PicodevError(
             "Pico SDK installation completed but pico_sdk_init.cmake was not found. "
             "Check the installation manually."
         )
@@ -360,10 +360,10 @@ def install_pico_sdk(home: Path | None = None, force: bool = False) -> Path:
 
 def install_ninja(home: Path | None = None, force: bool = False) -> Path:
     """Install the managed Ninja executable used for Windows builds."""
-    home = home or devlab_home()
+    home = home or picodev_home()
     platform_id = current_platform()
     if platform_id.key != NINJA_WINDOWS_ASSET.platform:
-        raise DevlabError(
+        raise PicodevError(
             f"Managed Ninja is not available for {platform_id.key}; install Ninja separately."
         )
 
@@ -380,7 +380,7 @@ def install_ninja(home: Path | None = None, force: bool = False) -> Path:
     print(f"Installing Ninja to {destination}...")
     _extract_zip(archive, destination, force=force)
     if not executable.exists():
-        raise DevlabError(
+        raise PicodevError(
             "Ninja installation completed but ninja.exe was not found. "
             "Check the installation manually."
         )
@@ -389,10 +389,10 @@ def install_ninja(home: Path | None = None, force: bool = False) -> Path:
 
 def install_picotool(home: Path | None = None, force: bool = False) -> Path:
     """Install prebuilt picotool so a native Windows compiler is not required."""
-    home = home or devlab_home()
+    home = home or picodev_home()
     platform_id = current_platform()
     if platform_id.key != PICOTOOL_WINDOWS_ASSET.platform:
-        raise DevlabError(
+        raise PicodevError(
             f"Managed picotool is not available for {platform_id.key}; install it separately."
         )
 
@@ -410,7 +410,7 @@ def install_picotool(home: Path | None = None, force: bool = False) -> Path:
     print(f"Installing picotool to {destination}...")
     _extract_zip(archive, destination, force=force)
     if not config_file.exists() or not executable.exists():
-        raise DevlabError(
+        raise PicodevError(
             "picotool installation completed but its executable or CMake config was not found."
         )
     return destination
@@ -455,7 +455,7 @@ def _move_extracted_tree(source: Path, destination: Path, force: bool) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
     if destination.exists():
         if not force:
-            raise DevlabError(f"Install destination already exists: {destination}")
+            raise PicodevError(f"Install destination already exists: {destination}")
         shutil.rmtree(destination)
 
     # Find the actual root directory in the extracted files
@@ -472,7 +472,7 @@ def _move_extracted_tree(source: Path, destination: Path, force: bool) -> None:
 
 def _extract_zip(archive: Path, destination: Path, force: bool) -> None:
     """Extract ZIP archive."""
-    with tempfile.TemporaryDirectory(prefix="devlab-pico-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="picodev-") as tmp:
         tmp_path = Path(tmp)
         with zipfile.ZipFile(archive) as zip_file:
             _safe_extract_zip(zip_file, tmp_path)
@@ -481,7 +481,7 @@ def _extract_zip(archive: Path, destination: Path, force: bool) -> None:
 
 def _extract_tarball(archive: Path, destination: Path, force: bool) -> None:
     """Extract tarball (tar.gz, tar.xz, etc)."""
-    with tempfile.TemporaryDirectory(prefix="devlab-pico-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="picodev-") as tmp:
         tmp_path = Path(tmp)
         
         # Determine compression type
@@ -504,7 +504,7 @@ def _safe_extract(tar: tarfile.TarFile, destination: Path) -> None:
     for member in tar.getmembers():
         target = (destination / member.name).resolve()
         if destination != target and destination not in target.parents:
-            raise DevlabError(f"Unsafe path in archive: {member.name}")
+            raise PicodevError(f"Unsafe path in archive: {member.name}")
     try:
         tar.extractall(destination, filter="data")
     except TypeError:  # Python < 3.12
@@ -517,7 +517,7 @@ def _safe_extract_zip(zip_file: zipfile.ZipFile, destination: Path) -> None:
     for member in zip_file.infolist():
         target = (destination / member.filename).resolve()
         if destination != target and destination not in target.parents:
-            raise DevlabError(f"Unsafe path in archive: {member.filename}")
+            raise PicodevError(f"Unsafe path in archive: {member.filename}")
     zip_file.extractall(destination)
 
 

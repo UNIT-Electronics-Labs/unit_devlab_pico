@@ -6,8 +6,8 @@ from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
 
-from devlab.errors import DevlabError
-from devlab.project import clean_project, create_project, flash_project, load_config
+from picodev.errors import PicodevError
+from picodev.project import clean_project, create_project, flash_project, load_config
 
 
 class CreateProjectTests(unittest.TestCase):
@@ -112,7 +112,7 @@ class CleanProjectTests(unittest.TestCase):
                 'name = "blink"\nbuild_dir = "."\nsources = ["main.c"]\n'
             )
 
-            with self.assertRaisesRegex(DevlabError, "project root"):
+            with self.assertRaisesRegex(PicodevError, "project root"):
                 clean_project(config_path)
 
 

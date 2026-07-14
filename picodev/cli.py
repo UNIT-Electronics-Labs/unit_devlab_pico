@@ -5,7 +5,7 @@ import platform
 from pathlib import Path
 
 from . import __version__
-from .errors import DevlabError
+from .errors import PicodevError
 from .platforms import current_platform
 from .project import (
     SUPPORTED_BOARDS,
@@ -28,7 +28,7 @@ from .toolchain import (
     gcc_archive_path,
     gcc_install_path,
     pico_sdk_install_path,
-    devlab_home,
+    picodev_home,
     install_toolchains,
     ninja_install_path,
     picotool_install_path,
@@ -72,7 +72,7 @@ def build_parser() -> argparse.ArgumentParser:
     new_parser.set_defaults(func=_new)
 
     build = commands.add_parser("build", help="Build the current Pico project.")
-    build.add_argument("-c", "--config", type=Path, help="Path to devlab.toml.")
+    build.add_argument("-c", "--config", type=Path, help="Path to picodev.toml.")
     build.add_argument(
         "--dry-run",
         action="store_true",
@@ -85,7 +85,7 @@ def build_parser() -> argparse.ArgumentParser:
     clean.set_defaults(func=_clean)
 
     flash = commands.add_parser("flash", help="Flash the built ELF to Pico using pyOCD.")
-    flash.add_argument("-c", "--config", type=Path, help="Path to devlab.toml.")
+    flash.add_argument("-c", "--config", type=Path, help="Path to picodev.toml.")
     flash.add_argument("--artifact", type=Path, help="ELF firmware path.")
     flash.add_argument("--probe", help="pyOCD debug probe unique ID or prefix.")
     flash.add_argument(
@@ -106,7 +106,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.command is None:
             parser.error("the following arguments are required: command")
         return args.func(args)
-    except DevlabError as exc:
+    except PicodevError as exc:
         parser.exit(2, f"picodev: error: {exc}\n")
 
 
@@ -116,7 +116,7 @@ def _doctor(args: argparse.Namespace) -> int:
     print(f"picodev: {__version__}")
     print(f"python: {platform.python_version()} ({platform.python_implementation()})")
     print(f"platform: {platform_id.key}")
-    print(f"home: {devlab_home()}")
+    print(f"home: {picodev_home()}")
     print(f"pico-sdk: {PICO_SDK_VERSION} ({PICO_SDK_RELEASE_URL})")
     print(f"arm-gcc: {ARM_GCC_VERSION} ({ARM_GCC_RELEASE_URL})")
     print(f"ninja: {NINJA_VERSION} ({NINJA_RELEASE_URL})")

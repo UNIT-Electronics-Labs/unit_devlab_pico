@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from .errors import DevlabError
+from .errors import PicodevError
 from .toolchain import (
     env_with_toolchain,
     find_executable,
@@ -53,7 +53,7 @@ def load_config(path: Path | None = None) -> BuildConfig:
     """Load project configuration from picodev.toml."""
     config_path = path or Path(DEFAULT_CONFIG)
     if not config_path.exists():
-        raise DevlabError(f"Project config not found: {config_path}")
+        raise PicodevError(f"Project config not found: {config_path}")
 
     with config_path.open("rb") as handle:
         data = tomllib.load(handle)
@@ -75,7 +75,7 @@ def _section(data: dict[str, Any], name: str) -> dict[str, Any]:
     """Get a section from config data, return empty dict if not found."""
     section = data.get(name, {})
     if not isinstance(section, dict):
-        raise DevlabError(f"[{name}] must be a table in devlab.toml")
+        raise PicodevError(f"[{name}] must be a table in picodev.toml")
     return section
 
 
@@ -88,11 +88,11 @@ def create_project(
     """Create a new Pico project."""
     if board not in SUPPORTED_BOARDS:
         supported = ", ".join(SUPPORTED_BOARDS)
-        raise DevlabError(f"Unsupported board: {board}. Supported boards: {supported}.")
+        raise PicodevError(f"Unsupported board: {board}. Supported boards: {supported}.")
 
     root = directory or Path(name)
     if root.exists() and any(root.iterdir()) and not force:
-        raise DevlabError(f"Directory is not empty: {root}")
+        raise PicodevError(f"Directory is not empty: {root}")
 
     root.mkdir(parents=True, exist_ok=True)
     _write(root / "picodev.toml", _template_config(name, board), force)
@@ -120,7 +120,7 @@ def build_project(config_path: Path | None = None, dry_run: bool = False) -> Pat
     # Check for required tools
     missing = missing_toolchain_components()
     if missing:
-        raise DevlabError(
+        raise PicodevError(
             f"Missing required tools: {', '.join(missing)}. "
             "Run 'picodev install' to install toolchains."
         )
@@ -167,7 +167,7 @@ def build_project(config_path: Path | None = None, dry_run: bool = False) -> Pat
     
     artifact = project_dir / config.artifact
     if not dry_run and not artifact.exists():
-        raise DevlabError(f"Build completed but artifact not found: {artifact}")
+        raise PicodevError(f"Build completed but artifact not found: {artifact}")
     
     return artifact
 
@@ -182,17 +182,17 @@ def clean_project(config_path: Path | None = None) -> tuple[Path, bool]:
     try:
         build_dir.relative_to(project_dir)
     except ValueError as exc:
-        raise DevlabError(
+        raise PicodevError(
             f"Refusing to clean a build directory outside the project: {build_dir}"
         ) from exc
 
     if build_dir == project_dir:
-        raise DevlabError("Refusing to clean the project root directory.")
+        raise PicodevError("Refusing to clean the project root directory.")
 
     if not build_dir.exists():
         return build_dir, False
     if not build_dir.is_dir():
-        raise DevlabError(f"Build path is not a directory: {build_dir}")
+        raise PicodevError(f"Build path is not a directory: {build_dir}")
 
     shutil.rmtree(build_dir)
     return build_dir, True
@@ -227,7 +227,7 @@ def flash_project(
     firmware = firmware.resolve()
 
     if not dry_run and not firmware.exists():
-        raise DevlabError(f"ELF firmware not found: {firmware}. Run 'picodev build' first.")
+        raise PicodevError(f"ELF firmware not found: {firmware}. Run 'picodev build' first.")
 
     target = "rp2350" if config.board in {"pico2", "pulsar_rp"} else "rp2040"
     command = [sys.executable, "-m", "pyocd", "flash", "--target", target]
@@ -310,9 +310,11 @@ def _run_command(cmd: list[str], cwd: Path | None = None, env: dict[str, str] | 
     try:
         subprocess.check_call(cmd, cwd=cwd, env=env)
     except subprocess.CalledProcessError as exc:
-        raise DevlabError(f"Command failed with exit code {exc.returncode}: {' '.join(cmd)}") from exc
+        raise PicodevError(
+            f"Command failed with exit code {exc.returncode}: {' '.join(cmd)}"
+        ) from exc
     except OSError as exc:
-        raise DevlabError(f"Failed to run command: {exc}") from exc
+        raise PicodevError(f"Failed to run command: {exc}") from exc
 
 
 def _template_config(name: str, board: str) -> str:

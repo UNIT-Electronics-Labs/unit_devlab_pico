@@ -5,6 +5,15 @@ All notable changes to picodev will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.8] - 2026-07-13
+
+### Fixed
+- Rename the internal Python package from `devlab` to `picodev`, so
+  `python -m picodev` works and the FPGA-oriented `devlab` namespace remains separate.
+
+### Changed
+- Rename `DEVLAB_HOME` and `~/.devlab` to `PICODEV_HOME` and `~/.picodev`.
+
 ## [0.1.7] - 2026-07-13
 
 ### Added

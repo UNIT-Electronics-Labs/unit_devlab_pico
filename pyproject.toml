@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "picodev"
-version = "0.1.7"
+version = "0.1.8"
 description = "Raspberry Pi Pico development helper for installing Pico SDK and ARM GCC toolchain."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -36,7 +36,7 @@ Source = "https://github.com/UNIT-Electronics-Labs/unit_devlab_pico"
 Issues = "https://github.com/UNIT-Electronics-Labs/unit_devlab_pico/issues"
 
 [project.scripts]
-picodev = "devlab.cli:main"
+picodev = "picodev.cli:main"
 
 [tool.setuptools.packages.find]
-include = ["devlab*"]
+include = ["picodev*"]
