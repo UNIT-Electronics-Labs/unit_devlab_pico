@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "picodev"
-version = "0.1.8"
+version = "0.1.9"
 description = "Raspberry Pi Pico development helper for installing Pico SDK and ARM GCC toolchain."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -26,6 +26,7 @@ classifiers = [
   "Topic :: Software Development :: Embedded Systems",
 ]
 dependencies = [
+  "certifi>=2024.7.4",
   "pyocd>=0.44.0,<0.45",
   "tomli>=2.0.1; python_version<'3.11'",
 ]

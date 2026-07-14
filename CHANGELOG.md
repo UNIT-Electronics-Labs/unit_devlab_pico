@@ -5,6 +5,13 @@ All notable changes to picodev will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.9] - 2026-07-13
+
+### Fixed
+- Use the `certifi` CA bundle for toolchain downloads, fixing certificate verification
+  failures with Python 3.14 on Windows.
+- Remove incomplete `.part` downloads after a network or TLS error.
+
 ## [0.1.8] - 2026-07-13
 
 ### Fixed

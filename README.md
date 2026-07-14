@@ -264,6 +264,21 @@ brew install cmake git
 On Windows:
 Download CMake from https://cmake.org/download/
 
+If pip warns that `picodev.exe` was installed in a directory that is not on
+`PATH`, the module form remains available without changing `PATH`:
+
+```powershell
+python -m picodev doctor
+python -m picodev install
+```
+
+To use the shorter `picodev` command, print the Scripts directory with the
+following command and add that directory to your user `PATH`:
+
+```powershell
+python -c "import sysconfig; print(sysconfig.get_path('scripts'))"
+```
+
 ## Support
 
 For documentation, bug reports, and feature requests, visit the

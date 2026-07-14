@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import os
 import shutil
+import ssl
 import stat
 import subprocess
 import sys
@@ -12,6 +13,8 @@ import urllib.request
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
+
+import certifi
 
 from .errors import PicodevError
 from .platforms import PlatformId, current_platform
@@ -266,17 +269,32 @@ def download_asset(asset: ToolchainAsset, destination: Path, force: bool = False
     if tmp_destination.exists():
         tmp_destination.unlink()
 
-    def report(blocks: int, block_size: int, total_size: int) -> None:
-        if total_size <= 0:
-            return
-        downloaded = min(blocks * block_size, total_size)
-        percent = downloaded * 100 / total_size
-        print(f"\rDownloading {asset.name}: {percent:5.1f}%", end="", flush=True)
-
     try:
-        urllib.request.urlretrieve(asset.url, tmp_destination, reporthook=report)
+        request = urllib.request.Request(
+            asset.url,
+            headers={"User-Agent": "picodev toolchain installer"},
+        )
+        context = ssl.create_default_context()
+        context.load_verify_locations(cafile=certifi.where())
+        with urllib.request.urlopen(request, context=context) as response:
+            total_header = response.headers.get("Content-Length")
+            total_size = int(total_header) if total_header else 0
+            downloaded = 0
+
+            with tmp_destination.open("wb") as handle:
+                while chunk := response.read(1024 * 1024):
+                    handle.write(chunk)
+                    downloaded += len(chunk)
+                    if total_size > 0:
+                        percent = min(downloaded, total_size) * 100 / total_size
+                        print(
+                            f"\rDownloading {asset.name}: {percent:5.1f}%",
+                            end="",
+                            flush=True,
+                        )
         print()
     except OSError as exc:
+        tmp_destination.unlink(missing_ok=True)
         raise PicodevError(f"Could not download {asset.url}: {exc}") from exc
 
     if asset.sha256:
